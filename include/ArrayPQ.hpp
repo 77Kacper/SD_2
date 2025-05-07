@@ -1,74 +1,115 @@
-#ifndef ARRAYPQ_HPP
-#define ARRAYPQ_HPP
-
-/*
-Kryterium porównania:
-    - wyższy priority >  niższy priority
-    - przy równym priority wygrywa mniejszy serial (FIFO)
- */
+#ifndef ARRAY_PQ_HPP
+#define ARRAY_PQ_HPP
 
 #include "DynArray.hpp"
-#include <cstddef>      // size_t
-#include <stdexcept>    // runtime_error
-#include <cstdint>      // int64_t
+#include <iostream>
 
 struct Node {
-    int         value;      // – dana, liczba
-    int         priority;   // – klucz porównania (im większy, tym ważniejszy)
-    std::int64_t serial;    // – numer kolejny wstawienia (do FIFO przy remisie priorytetów)
+    int  value;
+    int  priority;
+    long serial;
 };
 
 class ArrayPQ {
 public:
-    ArrayPQ() = default;
+    ArrayPQ() {
+        nextSerial = 0;
+    }
 
     void insert(Node n) {
-        n.serial = nextSerial_++;
-        a_.push_back(n);
+        n.serial = nextSerial;
+        nextSerial++;
+
+        data.push_back(n);
     }
 
-    Node extractMax() {
-        if (a_.empty()) throw std::runtime_error("ArrayPQ::extractMax – pq is empty");
-        std::size_t maxIdx = findMaxIndex();
-        Node maxNode = a_[maxIdx];
-        a_[maxIdx] = a_[a_.size() - 1];
-        a_.pop_back();               
-        return maxNode;
+    bool extractMax(Node& result) {
+        if (data.size() == 0) {
+            return false;
+        }
+
+        size_t index = findMaxIndex();
+
+        result = data[index];
+
+        data[index] = data[data.size() - 1];
+        data.pop_back();
+
+        return true;
     }
 
-    // Zwraca węzeł o najwyższym priorytecie
-    Node findMax() const {
-        if (a_.empty()) throw std::runtime_error("ArrayPQ::findMax – pq is empty");
-        return a_[findMaxIndex()];
+    bool findMax(Node& result) const {
+        if (data.size() == 0) {
+            return false;
+        }
+
+        size_t index = findMaxIndex();
+        result = data[index];
+
+        return true;
     }
 
-    //Zwiększa priorytet elementu o indeksie idx i (k opcjonalnie) aktualizuje serial, ale serial zostaje zachowujemy kolejność FIFO w ramach podniesienia klucza
-    void increaseKey(std::size_t idx, int newPriority) {
-        a_[idx].priority = newPriority;
+    bool increaseKey(size_t index, int newPriority) {
+        if (index >= data.size()) {
+            return false;
+        }
+
+        if (newPriority < data[index].priority) {
+            return false;
+        }
+
+        data[index].priority = newPriority;
+        return true;
     }
 
-    std::size_t size()  const { return a_.size(); }
-    bool        empty() const { return a_.empty(); }
+    bool decreaseKey(size_t index, int newPriority) {
+        if (index >= data.size()) {
+            return false;
+        }
+
+        if (newPriority > data[index].priority) {
+            return false;
+        }
+
+        data[index].priority = newPriority;
+        return true;
+    }
+
+    size_t size() const {
+        return data.size();
+    }
+
+    bool empty() const {
+        return data.size() == 0;
+    }
+
+    Node& operator[](size_t i) {
+        return data[i];
+    }
+
+    const Node& operator[](size_t i) const {
+        return data[i];
+    }
 
 private:
-    DynArray<Node> a_;
-    static std::int64_t nextSerial_;     // globalny licznik wstawek
+    size_t findMaxIndex() const {
+        size_t best = 0;
 
-    //Zwraca indeks pierwszego węzła o maksymalnym priorytecie Jeśli kilka ma ten sam priorytet, wybiera najstarszy (najmniejszy serial)
-    std::size_t findMaxIndex() const {
-        std::size_t best = 0;
-        for (std::size_t i = 1; i < a_.size(); ++i) {
-            if (isBetter(a_[i], a_[best])) best = i;
+        for (size_t i = 1; i < data.size(); i++) {
+            bool lepszyPriorytet = data[i].priority > data[best].priority;
+            bool rownyPriorytet  = data[i].priority == data[best].priority;
+            bool mniejszySerial  = data[i].serial < data[best].serial;
+
+            if (lepszyPriorytet || (rownyPriorytet && mniejszySerial)) {
+                best = i;
+            }
         }
+
         return best;
     }
 
-    static bool isBetter(const Node& lhs, const Node& rhs) {
-        if (lhs.priority != rhs.priority) return lhs.priority > rhs.priority;
-        return lhs.serial < rhs.serial;
-    }
+    DynArray<Node> data;
+    long nextSerial;
 };
 
-inline std::int64_t ArrayPQ::nextSerial_ = 0;
-
-#endif // ARRAYPQ_HPP
+#endif
