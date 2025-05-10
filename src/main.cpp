@@ -3,6 +3,7 @@
 #include <random>
 #include <limits>
 #include "ArrayPQ.hpp"
+#include "HeapPQ.hpp"
 
 using namespace std;
 
@@ -37,66 +38,50 @@ void pauseProgram() {
 }
 
 // Wczytywanie danych z pliku
-void loadFromFile(ArrayPQ& pq) {
+template <typename PQ>
+void loadFromFile(PQ& pq) {
     clearScreen();
-    cout << "Podaj nazwę pliku: ";
-    string filename;
-    cin >> filename;
+    cout << "podaj nazwę pliku: ";
+    string fn; cin >> fn;
 
-    ifstream fin(filename);
-    if (!fin) {
-        cout << "Nie można otworzyć pliku \"" << filename << "\"\n";
-        pauseProgram();
-        return;
-    }
+    ifstream fin(fn);
+    if (!fin) { cout << "nie można otworzyć pliku\n"; pauseProgram(); return; }
 
-    int v, p;
-    size_t count = 0;
-    while (fin >> v >> p) {
-        pq.insert({v, p, 0});
-        ++count;
-    }
+    int v, p; size_t cnt = 0;
+    while (fin >> v >> p) { pq.insert({v, p, 0}); ++cnt; }
 
-    cout << "Wczytano " << count << " elementów\n";
+    cout << "wczytano " << cnt << " elementów\n";
     pauseProgram();
 }
 
 // Generowanie losowych danych
-void generateRandom(ArrayPQ& pq) {
+template <typename PQ>
+void generateRandom(PQ& pq) {
     clearScreen();
-    cout << "Podaj seed i liczbę elementów: ";
-    unsigned seed;
-    size_t N;
-    if (!(cin >> seed >> N) || N == 0) {
-        cout << "Błędne dane\n";
-        pauseProgram();
-        return;
-    }
+    cout << "podaj seed i N: ";
+    unsigned seed; size_t N;
+    if (!(cin >> seed >> N) || N == 0) { cout << "błędne dane\n"; pauseProgram(); return; }
 
     mt19937 rng(seed);
-    uniform_int_distribution<int> valDist(0, static_cast<int>(2 * N));
-    uniform_int_distribution<int> prDist(0, static_cast<int>(5 * N - 1));
+    uniform_int_distribution<int> vDist(0, 2 * (int)N);
+    uniform_int_distribution<int> pDist(0, 5 * (int)N - 1);
 
-    for (size_t i = 0; i < N; ++i) {
-        int value = valDist(rng);
-        int priority = prDist(rng);
-        pq.insert({value, priority, 0});
-    }
+    for (size_t i = 0; i < N; ++i)
+        pq.insert({vDist(rng), pDist(rng), 0});
 
-    cout << "Wygenerowano i wstawiono " << N << " elementów (seed=" << seed << ")\n";
+    cout << "wstawiono " << N << " losowych elementów (seed=" << seed << ")\n";
     pauseProgram();
 }
 
-// Główna funkcja main
-int main()
+template <typename PQ>
+void menuLoop(PQ& pq)
 {
-    ArrayPQ pq;
     int choice;
 
     while (true)
     {
         clearScreen();
-        cout << "--- MENU kolejki priorytetowej (tablica) ---\n"
+        cout << "--- MENU kolejki ---\n"
              << "1  insert(e p)\n"
              << "2  extract-max()\n"
              << "3  find-max()\n"
@@ -120,7 +105,7 @@ int main()
         case 0:
             clearScreen();
             cout << "koniec\n";
-            return 0;
+            return;
 
         case 1:
         {
@@ -254,5 +239,27 @@ int main()
             cout << "nieznana opcja\n";
             pauseProgram();
         }
+    }
+}
+
+int main()
+{
+    clearScreen();
+    cout << "Wybierz implementację kolejki:\n"
+         << "1 – niesortowana tablica (ArrayPQ)\n"
+         << "2 – kopiec binarny (HeapPQ)\n> ";
+
+    int impl;
+    if (!(cin >> impl) || (impl != 1 && impl != 2)) {
+        cout << "niepoprawny wybór – koniec\n";
+        return 0;
+    }
+
+    if (impl == 1) {
+        ArrayPQ pq;
+        menuLoop(pq);
+    } else {
+        HeapPQ pq;
+        menuLoop(pq);
     }
 }
